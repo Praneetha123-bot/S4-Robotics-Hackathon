@@ -1,0 +1,5 @@
+We developed a cloud-based robot control system that enables real-time remote operation of industrial robots directly through a web browser from anywhere in the world. The system integrates a Webots simulation environment, a Node.js WebSocket backend, and a React-based control dashboard that delivers live telemetry, interactive path tracking, and dual control modes through both keyboard and on-screen interfaces.
+
+It supports real-time position and orientation updates with ~100 ms latency, dynamic coordinate scaling, and seamless versioning through GitHub-based update mechanisms. Additionally, the system includes automated one-click setup scripts to install all dependencies and launch the full pipeline effortlessly.
+
+Future enhancements such as AI-driven obstacle detection, multi-robot fleet management, cloud deployment at scale, and enterprise-grade authentication, position this platform as a strong foundation for next-generation remote industrial automation and robotics management systems.
