@@ -93,6 +93,41 @@ Robotics-Hackathon - Fitfest25/
 
 ## 🚀 Quick Start
 
+### 🎯 Automatic Setup (Recommended)
+
+**For first-time setup, use our automatic installer:**
+
+```powershell
+# Run this in PowerShell (as Administrator)
+.\setup.ps1
+```
+
+This will automatically:
+- ✅ Check and install Node.js (if missing)
+- ✅ Check and install Python (if missing)
+- ✅ Verify Webots installation
+- ✅ Install all backend dependencies (`npm install`)
+- ✅ Install all frontend dependencies (`npm install`)
+- ✅ Install Python dependencies (`websocket-client`)
+
+**After setup, start the entire system with one command:**
+
+```powershell
+.\start-system.ps1
+```
+
+This will:
+- 🚀 Start Backend Server (port 3000)
+- 🌐 Start Frontend Dashboard (port 5173)
+- 🤖 Launch Webots Simulation
+- 🌍 Open browser automatically
+
+📖 **For detailed setup instructions, see:** [`SETUP_INSTRUCTIONS.md`](./SETUP_INSTRUCTIONS.md)
+
+---
+
+### 📋 Manual Setup (Alternative)
+
 ### Prerequisites
 
 - **Webots R2023b+** (Download from https://cyberbotics.com)
