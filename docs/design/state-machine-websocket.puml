@@ -1,0 +1,115 @@
+@startuml state_machine_websocket_connection
+title WebSocket Connection State Machine
+
+skinparam backgroundColor #FEFEFE
+skinparam state {
+    BackgroundColor LightCyan
+    BorderColor Black
+    FontSize 12
+    ArrowColor Black
+}
+
+[*] --> Disconnected : Application Start
+
+state Disconnected {
+    state "Connection Closed" as disc_state
+    disc_state : WebSocket = null
+    disc_state : Status indicator: 🔴 Red
+    disc_state : UI controls disabled
+}
+
+state Connecting {
+    state "Attempting Connection" as conn_state
+    conn_state : WebSocket = new WebSocket(url)
+    conn_state : Status indicator: 🟡 Yellow
+    conn_state : Show "Connecting..." message
+    conn_state : Timeout: 5 seconds
+}
+
+state Connected {
+    state "Active Connection" as active_state
+    active_state : WebSocket.readyState = OPEN
+    active_state : Status indicator: 🟢 Green
+    active_state : UI controls enabled
+    active_state : Send/receive messages
+    active_state : Ping/pong heartbeat
+}
+
+state Error {
+    state "Connection Error" as error_state
+    error_state : WebSocket.readyState = CLOSED
+    error_state : Status indicator: 🔴 Red
+    error_state : Display error message
+    error_state : Log error details
+}
+
+state "Auto-Reconnect Wait" as Waiting {
+    state "Delay Before Retry" as wait_state
+    wait_state : Wait 2 seconds
+    wait_state : Status: "Reconnecting..."
+    wait_state : Retry counter incremented
+}
+
+' Transitions
+Disconnected --> Connecting : wsClient.connect()\nUser initiates
+
+Connecting --> Connected : onOpen event\nConnection successful ✅
+
+Connecting --> Error : onError event\nConnection failed ❌
+
+Connecting --> Error : Timeout (5s)\nNo response
+
+Connected --> Error : onError event\nConnection lost
+
+Connected --> Disconnected : onClose event (clean)\nUser disconnect\nServer shutdown
+
+Connected --> Error : onClose event (unexpected)\nNetwork failure
+
+Error --> Waiting : auto_reconnect = true\nRetry enabled
+
+Waiting --> Connecting : 2 seconds elapsed\nRetry connection
+
+Error --> Disconnected : auto_reconnect = false\nManual reconnect required
+
+' Self-transitions
+Connected --> Connected : onMessage event\nReceive telemetry/ack
+
+' Notes
+note right of Connecting
+    **Connection Parameters**:
+    - URL: ws://localhost:3000
+    - Protocol: RFC 6455
+    - Timeout: 5 seconds
+    - Binary: false (text/JSON only)
+end note
+
+note right of Connected
+    **Message Handling**:
+    
+    Received messages:
+    - type: "telemetry" → Update UI
+    - type: "ack" → Show confirmation
+    - type: "connected" → Log success
+    
+    Sent messages:
+    - type: "cmd" → Control commands
+    - cmd: forward/backward/left/right/stop
+end note
+
+note left of Waiting
+    **Retry Logic**:
+    - Fixed interval: 2 seconds
+    - Infinite retries
+    - No exponential backoff
+    - Status updates to user
+end note
+
+note bottom of Error
+    **Error Types**:
+    - ECONNREFUSED: Backend not running
+    - ETIMEDOUT: Network timeout
+    - ECONNRESET: Connection reset
+    - CLOSE_ABNORMAL: Unexpected close
+end note
+
+@enduml

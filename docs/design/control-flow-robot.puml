@@ -1,0 +1,212 @@
+@startuml control_flow_robot_controller
+title Robot Controller - Control Flow Diagram
+
+skinparam backgroundColor #FEFEFE
+skinparam activityBackgroundColor LightYellow
+skinparam activityBorderColor Black
+skinparam activityArrowColor Black
+
+start
+
+:Initialize Robot Controller;
+note right
+    - Import Supervisor API
+    - Set BACKEND_URL
+    - Initialize variables
+    - last_executed_command = "stop"
+end note
+
+:Get Robot Node (Supervisor);
+
+:Get Translation Field;
+:Get Rotation Field;
+:Get GPS Device;
+:Get Compass Device;
+
+:Enable GPS (sampling period = 64ms);
+:Enable Compass (sampling period = 64ms);
+
+:Connect to Backend WebSocket;
+note right
+    ws://localhost:3000
+    Retry on failure
+end note
+
+if (Connection Successful?) then (yes)
+    :Send "connected" message;
+else (no)
+    :Log error;
+    :Wait 2 seconds;
+    :Retry connection;
+    stop
+endif
+
+:Initialize Variables;
+note right
+    - battery_level = 100.0
+    - cycle_counter = 0
+    - current_command = "stop"
+    - last_position = [0, 0, 0]
+end note
+
+' Main control loop
+partition "Main Control Loop (Runs every timestep)" {
+    repeat
+        :Increment cycle_counter;
+        
+        :Check for WebSocket messages;
+        
+        if (Message received?) then (yes)
+            :Parse JSON message;
+            
+            if (type == "cmd"?) then (yes)
+                :Extract command;
+                :Update current_command;
+                note right
+                    Valid commands:
+                    - forward
+                    - backward
+                    - left
+                    - right
+                    - stop
+                end note
+            endif
+        endif
+        
+        ' Apply movement based on command
+        :Get Current Position (x, y, z);
+        :Get Current Orientation (θ);
+        
+        if (current_command?) then (forward)
+            :Calculate Forward Movement;
+            note right
+                new_x = x + cos(θ) × 0.02
+                new_y = y + sin(θ) × 0.02
+                new_θ = θ
+                
+                Battery: -0.002%
+                last_executed_command = "forward"
+            end note
+            :Apply new position to robot;
+            
+        elseif (backward) then
+            :Calculate Backward Movement;
+            note right
+                new_x = x - cos(θ) × 0.02
+                new_y = y - sin(θ) × 0.02
+                new_θ = θ
+                
+                Battery: -0.002%
+                last_executed_command = "backward"
+            end note
+            :Apply new position to robot;
+            
+        elseif (left) then
+            if (last_executed_command != "left"?) then (yes)
+                :Turn 90° Left;
+                note right
+                    new_θ = normalize_theta(θ + π/2)
+                    Print: "✨ Turn 90° Left"
+                    
+                    Then move forward:
+                    new_x = x + cos(new_θ) × 0.02
+                    new_y = y + sin(new_θ) × 0.02
+                    
+                    Battery: -0.003%
+                    last_executed_command = "left"
+                end note
+                :Apply rotation + movement;
+            else (no)
+                :Move Forward Only;
+                note right
+                    Skip rotation (debouncing)
+                    new_x = x + cos(θ) × 0.02
+                    new_y = y + sin(θ) × 0.02
+                    
+                    Battery: -0.002%
+                end note
+                :Apply movement only;
+            endif
+            
+        elseif (right) then
+            if (last_executed_command != "right"?) then (yes)
+                :Turn 90° Right;
+                note right
+                    new_θ = normalize_theta(θ - π/2)
+                    Print: "✨ Turn 90° Right"
+                    
+                    Then move forward:
+                    new_x = x + cos(new_θ) × 0.02
+                    new_y = y + sin(new_θ) × 0.02
+                    
+                    Battery: -0.003%
+                    last_executed_command = "right"
+                end note
+                :Apply rotation + movement;
+            else (no)
+                :Move Forward Only;
+                note right
+                    Skip rotation (debouncing)
+                    new_x = x + cos(θ) × 0.02
+                    new_y = y + sin(θ) × 0.02
+                    
+                    Battery: -0.002%
+                end note
+                :Apply movement only;
+            endif
+            
+        else (stop)
+            :No movement;
+            note right
+                Battery: -0.0005% (idle)
+                last_executed_command = "stop"
+            end note
+        endif
+        
+        :Update battery_level;
+        
+        if (battery_level < 0?) then (yes)
+            :Set battery_level = 0;
+        endif
+        
+        ' Calculate speed
+        :Get new position;
+        :Calculate distance traveled;
+        :Calculate speed = distance / timestep;
+        
+        ' Build telemetry
+        if (cycle_counter % 3 == 0?) then (yes)
+            note right
+                Send telemetry every ~200ms
+                (every 3 controller cycles)
+            end note
+            
+            :Build telemetry JSON;
+            note right
+                {
+                  "type": "telemetry",
+                  "pose": {"x": x, "y": y, "theta": θ},
+                  "speed": speed,
+                  "battery": battery_level,
+                  "cycle": cycle_counter,
+                  "timestamp": current_time
+                }
+            end note
+            
+            :Send via WebSocket;
+        endif
+        
+        :Update last_position;
+        
+        :Step simulation (64ms);
+        
+    repeat while (Simulation running?) is (yes)
+}
+
+:Close WebSocket connection;
+
+:Cleanup resources;
+
+stop
+
+@enduml

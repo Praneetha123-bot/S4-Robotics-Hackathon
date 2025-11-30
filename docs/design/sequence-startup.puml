@@ -1,0 +1,236 @@
+@startuml sequence_system_startup
+title System Startup - Complete Initialization Sequence
+
+skinparam backgroundColor #FEFEFE
+skinparam sequenceArrowThickness 2
+skinparam roundcorner 10
+
+actor "Developer/User" as User
+participant "Backend\n(Node.js)" as Backend
+participant "Frontend\n(Vite + React)" as Frontend
+participant "Webots\nApplication" as Webots
+participant "Robot\nController\n(Python)" as Robot
+
+== Phase 1: Backend Initialization ==
+User -> Backend : npm start
+activate Backend
+
+Backend -> Backend : Load server.js
+Backend -> Backend : Initialize Express app
+Backend -> Backend : Setup CORS middleware
+Backend -> Backend : Create HTTP server (port 3000)
+
+Backend -> Backend : Initialize WebSocket Server
+note right
+    const wss = new WebSocketServer({
+      server: httpServer
+    });
+end note
+
+Backend -> Backend : Register WebSocket handlers
+note right
+    - onConnection
+    - onMessage
+    - onClose
+    - onError
+end note
+
+Backend -> Backend : Setup message router\n(ws-router.js)
+
+Backend -> Backend : Start HTTP server
+note right
+    httpServer.listen(3000)
+end note
+
+Backend --> User : ✅ Server Running\nws://localhost:3000\nhttp://localhost:3000
+deactivate Backend
+
+== Phase 2: Frontend Initialization ==
+User -> Frontend : npm run dev
+activate Frontend
+
+Frontend -> Frontend : Load vite.config.js
+Frontend -> Frontend : Load Tailwind CSS config
+Frontend -> Frontend : Initialize Vite dev server
+
+Frontend -> Frontend : Bundle React application
+note right
+    - Transpile JSX
+    - Apply Tailwind
+    - Bundle modules
+    - Enable HMR
+end note
+
+Frontend -> Frontend : Start dev server
+note right
+    Vite server on port 5173
+    (or next available port)
+end note
+
+Frontend --> User : ✅ Frontend Running\nhttp://localhost:5173
+note right
+    VITE v5.x.x ready in xxx ms
+    
+    ➜ Local: http://localhost:5173/
+    ➜ press h to show help
+end note
+deactivate Frontend
+
+User -> Frontend : Open browser\nhttp://localhost:5173
+activate Frontend
+
+Frontend -> Frontend : Load index.html
+Frontend -> Frontend : Execute main.jsx
+Frontend -> Frontend : Mount React App
+
+Frontend -> Frontend : Initialize WebSocket client
+note right
+    wsClient.connect()
+    URL: ws://localhost:3000
+end note
+
+Frontend -> Backend : Connect WebSocket
+activate Backend
+
+Backend -> Backend : Accept connection
+Backend -> Backend : Add client to list
+Backend -> Backend : Assign connection ID
+
+Backend --> Frontend : Connection Accepted\n(WebSocket OPEN)
+deactivate Backend
+
+Frontend -> Frontend : Update state\nsetConnectionStatus("connected")
+Frontend -> Frontend : Enable UI controls
+Frontend -> Frontend : Render dashboard
+
+Frontend --> User : ✅ Dashboard Ready\n🟢 Connected
+deactivate Frontend
+
+== Phase 3: Webots & Robot Controller Initialization ==
+User -> Webots : Launch Application
+activate Webots
+
+Webots -> Webots : Initialize Webots engine
+Webots -> Webots : Load GUI
+
+User -> Webots : File → Open World
+User -> Webots : Select robot_world_humanoid.wbt
+
+Webots -> Webots : Parse world file
+Webots -> Webots : Create scene graph
+Webots -> Webots : Initialize physics engine
+Webots -> Webots : Load robot model
+
+Webots -> Robot : Initialize controller
+activate Robot
+
+Robot -> Robot : Import Supervisor module
+Robot -> Robot : Get robot node
+Robot -> Robot : Get translation field
+Robot -> Robot : Get rotation field
+
+Robot -> Robot : Initialize devices
+note right
+    GPS device (sampling: 64ms)
+    Compass device (sampling: 64ms)
+end note
+
+Robot -> Robot : Enable sensors
+Robot -> Robot : Set BACKEND_URL
+note right
+    ws://localhost:3000
+end note
+
+Robot -> Robot : Initialize variables
+note right
+    battery_level = 100.0
+    cycle_counter = 0
+    current_command = "stop"
+    last_executed_command = "stop"
+end note
+
+Robot -> Backend : Connect WebSocket\nws://localhost:3000
+activate Backend
+
+Backend -> Backend : Accept robot connection
+Backend -> Backend : Add to client list
+
+Backend --> Robot : Connection Accepted ✅
+deactivate Backend
+
+Robot -> Backend : Send initial status
+activate Backend
+note right
+    {
+      "type": "connected",
+      "message": "Robot controller initialized",
+      "id": "robot_controller"
+    }
+end note
+
+Backend -> Frontend : Broadcast status
+deactivate Backend
+activate Frontend
+
+Frontend -> Frontend : Add to logs\n"✅ Robot controller initialized"
+Frontend --> User : Show log entry
+deactivate Frontend
+
+Robot --> Webots : ✅ Controller Ready
+deactivate Robot
+
+User -> Webots : Click Play ▶️
+
+Webots -> Webots : Start simulation
+Webots -> Robot : Begin control loop
+activate Robot
+
+Robot -> Robot : Step 1: Read sensors
+Robot -> Robot : Step 2: Process commands
+Robot -> Robot : Step 3: Build telemetry
+
+Robot -> Backend : Send telemetry (first)
+activate Backend
+note right
+    {
+      "type": "telemetry",
+      "pose": {"x":0, "y":0, "theta":0},
+      "speed": 0,
+      "battery": 100.0,
+      "cycle": 1,
+      "timestamp": 1701234567890
+    }
+end note
+
+Backend -> Frontend : Broadcast telemetry
+deactivate Backend
+activate Frontend
+
+Frontend -> Frontend : Update telemetry panel
+Frontend -> Frontend : Initialize path view
+Frontend -> Frontend : Add first log
+
+Frontend --> User : ✅ Telemetry Streaming\nPosition: (0.000, 0.000)\nBattery: 100.0%
+deactivate Frontend
+deactivate Robot
+
+Webots --> User : ✅ Simulation Running
+deactivate Webots
+
+== Phase 4: System Ready ==
+note over User, Robot
+    **✅ ALL SYSTEMS OPERATIONAL**
+    
+    Backend: Listening on port 3000
+    Frontend: Serving dashboard on port 5173
+    Webots: Simulation running
+    Robot: Sending telemetry every 200-300ms
+    
+    User can now:
+    - View real-time telemetry
+    - Control robot movement
+    - Monitor path visualization
+    - Check live logs
+end note
+
+@enduml

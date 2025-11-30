@@ -1,0 +1,90 @@
+@startuml sequence_telemetry_flow
+title Telemetry Flow - Robot to Frontend
+
+skinparam backgroundColor #FEFEFE
+skinparam sequenceArrowThickness 2
+skinparam roundcorner 10
+
+actor "Robot Controller" as Robot
+participant "Backend\nWebSocket Server" as Backend
+participant "Frontend\nWebSocket Client" as Frontend
+participant "React UI" as UI
+
+== Initialization ==
+Robot -> Backend : Connect WebSocket\nws://localhost:3000
+activate Backend
+Backend --> Robot : Connection Accepted ✅
+deactivate Backend
+
+Frontend -> Backend : Connect WebSocket
+activate Backend
+Backend --> Frontend : Connection Accepted ✅
+deactivate Backend
+
+== Telemetry Streaming (Every 200-300ms) ==
+loop Every Controller Cycle (64ms timestep)
+    Robot -> Robot : Get Robot State
+    activate Robot
+    Robot -> Robot : Read GPS (x, y)
+    Robot -> Robot : Read Compass (θ)
+    Robot -> Robot : Calculate Speed
+    Robot -> Robot : Check Battery Level
+    
+    Robot -> Robot : Build Telemetry JSON
+    note right
+        {
+          "type": "telemetry",
+          "pose": {"x": 1.23, "y": 0.45, "theta": 0.78},
+          "speed": 0.02,
+          "battery": 92.5,
+          "cycle": 150,
+          "timestamp": 1701234567890
+        }
+    end note
+    deactivate Robot
+    
+    Robot -> Backend : Send Telemetry\n(WebSocket JSON)
+    activate Backend
+    
+    Backend -> Backend : Parse Message
+    Backend -> Backend : Validate Type
+    
+    Backend -> Frontend : Broadcast to All Clients
+    activate Frontend
+    deactivate Backend
+    
+    Frontend -> Frontend : Receive Message
+    Frontend -> Frontend : Parse JSON
+    
+    Frontend -> UI : Update State
+    activate UI
+    
+    UI -> UI : setTelemetry(data)
+    UI -> UI : setPathHistory(prev => [...prev, point])
+    UI -> UI : setLogs(prev => [newLog, ...prev])
+    
+    UI -> UI : Render Components
+    note right
+        - Telemetry Panel (position, speed, battery)
+        - Path View (add point to trail)
+        - Logs Panel (add new entry)
+    end note
+    
+    deactivate UI
+    deactivate Frontend
+end
+
+== Error Handling ==
+Robot -> Backend : Send Telemetry
+activate Backend
+Backend --> Backend : Connection Lost ❌
+Backend --> Robot : Error: Connection Failed
+deactivate Backend
+
+Robot -> Robot : Wait 2 seconds
+Robot -> Backend : Retry Connection
+activate Backend
+Backend --> Robot : Reconnected ✅
+deactivate Backend
+
+@enduml

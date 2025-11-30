@@ -1,0 +1,218 @@
+#VRML_SIM R2025a utf8
+
+WorldInfo {
+  info [
+    "S4 Remote Robot Management System"
+    "Fitfest25 Hackathon"
+  ]
+  title "S4 Robot World"
+  basicTimeStep 64
+  contactProperties [
+    ContactProperties {
+      material1 "wheel"
+      material2 "floor"
+      coulombFriction [
+        1.5
+      ]
+      bounce 0
+      softCFM 0.0001
+    }
+  ]
+}
+Viewpoint {
+  orientation -0.502518907629606 0.502518907629606 0.7035264706814485 2
+  position 14287.07539491989 -68855.91637678954 233741.89099822196
+}
+Background {
+  skyColor [
+    0.4 0.7 1
+  ]
+}
+DirectionalLight {
+  direction 0 -1 -0.5
+  castShadows TRUE
+}
+DEF FLOOR Solid {
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.8 0.8 0.8
+        roughness 1
+        metalness 0
+      }
+      geometry Plane {
+        size 10 10
+      }
+    }
+  ]
+  name "floor"
+  contactMaterial "floor"
+  boundingObject Plane {
+    size 10 10
+  }
+}
+DEF ROBOT Robot {
+  translation 0 0 0.1
+  rotation 0 0 1 0
+  children [
+    DEF BODY Shape {
+      appearance PBRAppearance {
+        baseColor 0.2 0.4 0.8
+        metalness 0
+      }
+      geometry Box {
+        size 0.3 0.2 0.1
+      }
+    }
+    DEF LEFT_WHEEL HingeJoint {
+      jointParameters HingeJointParameters {
+        position -1.6134737502732195
+        axis 0 1 0
+        anchor 0.1 0.12 0
+      }
+      device [
+        RotationalMotor {
+          name "left wheel motor"
+          maxVelocity 100
+          maxTorque 20
+        }
+        PositionSensor {
+          name "left wheel sensor"
+        }
+      ]
+      endPoint Solid {
+        translation 0.1 0.12 0
+        rotation 0.5609260425816577 -0.5853885279361806 0.5853906781922581 2.1192097700768
+        children [
+          DEF WHEEL_SHAPE Shape {
+            appearance PBRAppearance {
+              baseColor 0.1 0.1 0.1
+              roughness 1
+            }
+            geometry Cylinder {
+              height 0.03
+              radius 0.05
+            }
+          }
+        ]
+        name "left wheel"
+        contactMaterial "wheel"
+        boundingObject USE WHEEL_SHAPE
+        physics Physics {
+          density -1
+          mass 0.1
+        }
+        linearVelocity -9.424953898179017e-15 -2.555880220430066e-14 -7.270135391445064e-16
+        angularVelocity -1.2194317364672933e-14 -4.8637450269097055e-15 -7.758955411983864e-16
+      }
+    }
+    DEF RIGHT_WHEEL HingeJoint {
+      jointParameters HingeJointParameters {
+        position 550.4060610448329
+        axis 0 1 0
+        anchor 0.1 -0.12 0
+      }
+      device [
+        RotationalMotor {
+          name "right wheel motor"
+          maxVelocity 100
+          maxTorque 20
+        }
+        PositionSensor {
+          name "right wheel sensor"
+        }
+      ]
+      endPoint Solid {
+        translation 0.1 -0.12 0
+        rotation 0.22356770978957297 -0.6892075121218546 0.6892100437270549 2.7016927169095837
+        children [
+          USE WHEEL_SHAPE
+        ]
+        name "right wheel"
+        contactMaterial "wheel"
+        boundingObject USE WHEEL_SHAPE
+        physics Physics {
+          density -1
+          mass 0.1
+        }
+        linearVelocity -1.3138132416314721e-14 2.2573566240203994e-14 7.616430477780416e-17
+        angularVelocity -1.0881561406074412e-14 -3.1967208548561704e-15 -7.356725046291885e-16
+      }
+    }
+    DEF BACK_LEFT_WHEEL HingeJoint {
+      jointParameters HingeJointParameters {
+        position -1.6134638513022925
+        axis 0 1 0
+        anchor -0.1 0.12 0
+      }
+      device [
+        RotationalMotor {
+          name "back_left_motor"
+          maxVelocity 100
+          maxTorque 20
+        }
+      ]
+      endPoint Solid {
+        translation -0.1 0.12 0
+        rotation 0.5609298515846199 -0.5853867030185468 0.5853888532679211 2.119203975341816
+        children [
+          USE WHEEL_SHAPE
+        ]
+        name "back left wheel"
+        contactMaterial "wheel"
+        boundingObject USE WHEEL_SHAPE
+        physics Physics {
+          density -1
+          mass 0.1
+        }
+        linearVelocity 1.2858442451507315e-14 -2.1855923132962793e-14 3.089291693743298e-16
+        angularVelocity -6.259667985911187e-15 -1.8036549433374614e-15 -6.013744384700998e-16
+      }
+    }
+    DEF BACK_RIGHT_WHEEL HingeJoint {
+      jointParameters HingeJointParameters {
+        position 550.4060708896259
+        axis 0 1 0
+        anchor -0.1 -0.12 0
+      }
+      device [
+        RotationalMotor {
+          name "back_right_motor"
+          maxVelocity 100
+          maxTorque 20
+        }
+      ]
+      endPoint Solid {
+        translation -0.1 -0.12 0
+        rotation 0.22357127192359744 -0.6892069343699551 0.6892094659730331 2.7016859318071402
+        children [
+          USE WHEEL_SHAPE
+        ]
+        name "back right wheel"
+        contactMaterial "wheel"
+        boundingObject USE WHEEL_SHAPE
+        physics Physics {
+          density -1
+          mass 0.1
+        }
+        linearVelocity 9.040719886008941e-15 2.695809012229388e-14 8.020486461105366e-16
+        angularVelocity -3.086012592734745e-14 -4.09574832994903e-15 -6.024148478555337e-16
+      }
+    }
+    GPS {
+    }
+    Compass {
+    }
+  ]
+  boundingObject USE BODY
+  physics Physics {
+    density -1
+    mass 1
+    centerOfMass [
+      0 0 0
+    ]
+  }
+  controller "robot_controller"
+  linearVelocity -1.5673306674920745e-16 1.7592531902809098e-16 2.2737367544323206e-16
+  angularVelocity 2.8853065268216334e-15 -3.761722454905629e-15 -6.893559091217888e-16
+}

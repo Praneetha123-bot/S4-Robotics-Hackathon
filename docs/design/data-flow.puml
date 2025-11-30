@@ -1,0 +1,167 @@
+@startuml data_flow_diagram
+title S4 System - Data Flow Diagram (Level 0 & Level 1)
+
+skinparam backgroundColor #FEFEFE
+skinparam actorBackgroundColor LightBlue
+skinparam databaseBackgroundColor LightYellow
+skinparam rectangleBackgroundColor LightGreen
+
+' External Entities
+actor "User" as User
+rectangle "Webots\nSimulation\nEngine" as Webots
+
+' === Level 0: Context Diagram ===
+package "S4 Remote Robot Management System" as System {
+    rectangle "S4 System" as S4
+}
+
+User -down-> S4 : Commands\n(forward/back/left/right/stop)
+S4 -up-> User : Telemetry Display\n(position, speed, battery)
+S4 -right-> Webots : Robot Control\n(position, rotation)
+Webots -left-> S4 : Sensor Data\n(GPS, Compass)
+
+note right of System
+    **Level 0: Context Diagram**
+    Shows system as a single process
+    with external entities
+end note
+
+newpage
+
+' === Level 1: Detailed Data Flow ===
+
+title S4 System - Data Flow Diagram (Level 1)
+
+actor "User" as User2
+rectangle "Webots Engine" as Webots2
+
+package "S4 Remote Robot Management System - Level 1" {
+    
+    ' Processes
+    rectangle "1.0\nCapture User Input" as P1 {
+        note bottom
+            - Button clicks
+            - Keyboard events
+            - Command validation
+        end note
+    }
+    
+    rectangle "2.0\nManage WebSocket\nCommunication" as P2 {
+        note bottom
+            - Connect/disconnect
+            - Send commands
+            - Receive telemetry
+            - Auto-reconnect
+        end note
+    }
+    
+    rectangle "3.0\nRoute Messages" as P3 {
+        note bottom
+            - Parse message type
+            - Forward commands to robot
+            - Broadcast telemetry to clients
+            - Handle acknowledgments
+        end note
+    }
+    
+    rectangle "4.0\nControl Robot\nMovement" as P4 {
+        note bottom
+            - Parse commands
+            - Apply kinematics
+            - Command debouncing
+            - Update position/rotation
+        end note
+    }
+    
+    rectangle "5.0\nCollect Sensor Data" as P5 {
+        note bottom
+            - Read GPS (x, y)
+            - Read Compass (θ)
+            - Calculate speed
+            - Monitor battery
+        end note
+    }
+    
+    rectangle "6.0\nBuild Telemetry" as P6 {
+        note bottom
+            - Format JSON message
+            - Add timestamp
+            - Include all metrics
+        end note
+    }
+    
+    rectangle "7.0\nVisualize Data" as P7 {
+        note bottom
+            - Render telemetry panel
+            - Update path view
+            - Display logs
+            - Show connection status
+        end note
+    }
+    
+    ' Data Stores
+    database "D1\nCommand\nQueue" as D1
+    database "D2\nTelemetry\nHistory" as D2
+    database "D3\nPath\nHistory\n(last 500)" as D3
+    database "D4\nLog\nEntries\n(last 100)" as D4
+    database "D5\nRobot\nState" as D5
+}
+
+' Data Flows - User Interaction
+User2 --> P1 : Button press\nKeyboard input
+P1 --> D1 : Store command\n{type:"cmd", cmd:"forward"}
+D1 --> P2 : Read command
+P2 --> P3 : Send command\nvia WebSocket
+
+' Data Flows - Command Processing
+P3 --> P4 : Forward command\nto robot
+P4 --> D5 : Update robot state\n(position, orientation, battery)
+D5 --> Webots2 : Apply movement\ntranslation.setSFVec3f()\nrotation.setSFRotation()
+
+' Data Flows - Sensor Reading
+Webots2 --> P5 : Sensor readings\nGPS, Compass values
+P5 --> D5 : Store current state
+D5 --> P6 : Read state data
+
+' Data Flows - Telemetry Streaming
+P6 --> P2 : Send telemetry JSON\n{"type":"telemetry",...}
+P2 --> P3 : WebSocket message
+P3 --> D2 : Store telemetry\n(backend history)
+P3 --> P7 : Broadcast to frontend
+
+' Data Flows - Visualization
+P7 --> D3 : Add to path history\n{x, y, θ, timestamp}
+P7 --> D4 : Add to log entries\n{message, timestamp}
+D3 --> P7 : Read for canvas rendering
+D4 --> P7 : Read for log panel
+P7 --> User2 : Display UI\n(telemetry, path, logs)
+
+' Timing annotations
+note top of P6
+    **Frequency**: Every 200-300ms
+    (every 3 controller cycles)
+end note
+
+note right of D5
+    **State Variables**:
+    - position: [x, y, z]
+    - orientation: [ax, ay, az, angle]
+    - battery_level: float (0-100)
+    - speed: float (m/s)
+    - cycle_counter: int
+    - last_executed_command: string
+end note
+
+note left of D3
+    **Auto-trimming**:
+    Keeps only last 500 points
+    Oldest removed automatically
+end note
+
+note left of D4
+    **FIFO Queue**:
+    Keeps only last 100 entries
+    Oldest removed automatically
+end note
+
+@enduml

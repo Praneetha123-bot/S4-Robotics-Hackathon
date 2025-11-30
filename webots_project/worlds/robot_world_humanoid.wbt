@@ -1,0 +1,146 @@
+#VRML_SIM R2025a utf8
+
+WorldInfo {
+  info [
+    "S4 Remote Robot Management System - Humanoid Robot"
+    "Fitfest25 Hackathon"
+  ]
+  title "S4 Robot World - Humanoid"
+  basicTimeStep 64
+}
+
+Viewpoint {
+  orientation -0.5 0.5 0.7 2.0
+  position 0 0 10
+}
+
+Background {
+  skyColor [
+    0.4 0.7 1
+  ]
+}
+
+DirectionalLight {
+  direction 0 -1 -0.5
+  castShadows TRUE
+}
+
+DEF FLOOR Solid {
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.8 0.8 0.8
+        roughness 1
+        metalness 0
+      }
+      geometry Plane {
+        size 20 20
+      }
+    }
+  ]
+  name "floor"
+  boundingObject Plane {
+    size 20 20
+  }
+}
+
+DEF ROBOT Robot {
+  translation 0 0 0.15
+  rotation 0 0 1 0
+  children [
+    DEF BODY Shape {
+      appearance PBRAppearance {
+        baseColor 0.2 0.4 0.8
+        metalness 0.3
+        roughness 0.5
+      }
+      geometry Box {
+        size 0.3 0.2 0.5
+      }
+    }
+    DEF HEAD Transform {
+      translation 0 0 0.35
+      children [
+        Shape {
+          appearance PBRAppearance {
+            baseColor 0.9 0.7 0.6
+            metalness 0
+          }
+          geometry Sphere {
+            radius 0.1
+          }
+        }
+      ]
+    }
+    DEF LEFT_ARM Transform {
+      translation 0 0.15 0.15
+      children [
+        Shape {
+          appearance PBRAppearance {
+            baseColor 0.2 0.4 0.8
+            metalness 0.3
+          }
+          geometry Box {
+            size 0.08 0.08 0.4
+          }
+        }
+      ]
+    }
+    DEF RIGHT_ARM Transform {
+      translation 0 -0.15 0.15
+      children [
+        Shape {
+          appearance PBRAppearance {
+            baseColor 0.2 0.4 0.8
+            metalness 0.3
+          }
+          geometry Box {
+            size 0.08 0.08 0.4
+          }
+        }
+      ]
+    }
+    DEF LEFT_LEG Transform {
+      translation 0 0.07 -0.35
+      children [
+        Shape {
+          appearance PBRAppearance {
+            baseColor 0.1 0.3 0.7
+            metalness 0.3
+          }
+          geometry Box {
+            size 0.1 0.1 0.3
+          }
+        }
+      ]
+    }
+    DEF RIGHT_LEG Transform {
+      translation 0 -0.07 -0.35
+      children [
+        Shape {
+          appearance PBRAppearance {
+            baseColor 0.1 0.3 0.7
+            metalness 0.3
+          }
+          geometry Box {
+            size 0.1 0.1 0.3
+          }
+        }
+      ]
+    }
+    GPS {
+      name "gps"
+    }
+    Compass {
+      name "compass"
+    }
+  ]
+  name "humanoid_robot"
+  boundingObject USE BODY
+  physics Physics {
+    density -1
+    mass 1.0
+  }
+  controller "robot_controller"
+  supervisor TRUE
+}

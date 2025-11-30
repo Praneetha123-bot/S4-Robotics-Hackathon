@@ -1,0 +1,178 @@
+@startuml sequence_command_flow
+title Command Flow - Frontend to Robot
+
+skinparam backgroundColor #FEFEFE
+skinparam sequenceArrowThickness 2
+skinparam roundcorner 10
+
+actor "User" as User
+participant "Control Panel\n(React)" as Controls
+participant "WebSocket Client" as WSClient
+participant "Backend\nWS Router" as Backend
+participant "Robot Controller" as Robot
+participant "Webots Engine" as Webots
+
+== Command Execution ==
+User -> Controls : Click "Forward" Button\n(or press W key)
+activate Controls
+
+Controls -> Controls : Check if disabled
+alt Connection Active
+    Controls -> Controls : setActiveButton("forward")
+    Controls -> Controls : Add visual feedback
+    
+    Controls -> WSClient : sendCommand("forward")
+    activate WSClient
+    
+    WSClient -> WSClient : Build JSON Message
+    note right
+        {
+          "type": "cmd",
+          "cmd": "forward"
+        }
+    end note
+    
+    WSClient -> Backend : Send via WebSocket
+    deactivate WSClient
+    activate Backend
+    
+    Backend -> Backend : Receive Message
+    Backend -> Backend : Parse JSON
+    Backend -> Backend : Validate Type = "cmd"
+    Backend -> Backend : Extract command
+    
+    Backend -> Robot : Forward Command
+    deactivate Backend
+    activate Robot
+    
+    Robot -> Robot : Receive Command
+    Robot -> Robot : Parse JSON
+    Robot -> Robot : Extract cmd = "forward"
+    
+    Robot -> Robot : Check last_executed_command
+    alt Command is "forward"
+        Robot -> Robot : Calculate New Position
+        note right
+            new_x = x + cos(θ) × 0.02
+            new_y = y + sin(θ) × 0.02
+            new_θ = θ (unchanged)
+        end note
+        
+        Robot -> Robot : Update last_executed_command = "forward"
+        Robot -> Robot : Drain battery (-0.002%)
+        
+        Robot -> Webots : Apply Movement
+        activate Webots
+        Webots -> Webots : translation.setSFVec3f([new_x, new_y, 0.15])
+        Webots -> Webots : Update Physics
+        Webots --> Robot : Position Updated ✅
+        deactivate Webots
+        
+        Robot -> Backend : Send Updated Telemetry
+        activate Backend
+        Backend -> Controls : Broadcast Telemetry
+        deactivate Backend
+        activate Controls
+        
+        Controls -> Controls : Update UI
+        Controls -> Controls : Show new position
+        deactivate Controls
+    end
+    deactivate Robot
+    
+else Connection Inactive
+    Controls -> Controls : Button disabled
+    Controls -> User : Show "Disconnected" warning
+end
+
+deactivate Controls
+
+== Left Turn Command (with Debouncing) ==
+User -> Controls : Click "Left" Button
+activate Controls
+
+Controls -> WSClient : sendCommand("left")
+activate WSClient
+WSClient -> Backend : {"type":"cmd", "cmd":"left"}
+deactivate WSClient
+activate Backend
+
+Backend -> Robot : Forward Command
+deactivate Backend
+activate Robot
+
+Robot -> Robot : Check last_executed_command
+
+alt last_executed_command != "left" (First Press)
+    Robot -> Robot : Turn 90° Left
+    note right
+        new_θ = normalize_theta(θ + π/2)
+        Print: "✨ Turn 90° Left"
+    end note
+    
+    Robot -> Robot : Calculate Forward Movement
+    note right
+        new_x = x + cos(new_θ) × 0.02
+        new_y = y + sin(new_θ) × 0.02
+    end note
+    
+    Robot -> Robot : Update last_executed_command = "left"
+    Robot -> Robot : Drain battery (-0.003%)
+    
+    Robot -> Webots : Apply Turn + Movement
+    activate Webots
+    Webots -> Webots : rotation.setSFRotation([0,0,1,new_θ])
+    Webots -> Webots : translation.setSFVec3f([new_x,new_y,0.15])
+    Webots --> Robot : Updated ✅
+    deactivate Webots
+    
+else last_executed_command == "left" (Holding Button)
+    Robot -> Robot : Skip rotation (already turned)
+    Robot -> Robot : Just move forward
+    note right
+        new_x = x + cos(θ) × 0.02
+        new_y = y + sin(θ) × 0.02
+        (no rotation change)
+    end note
+    
+    Robot -> Webots : Apply Forward Only
+    activate Webots
+    Webots -> Webots : translation.setSFVec3f([new_x,new_y,0.15])
+    Webots --> Robot : Updated ✅
+    deactivate Webots
+end
+
+Robot -> Backend : Send Telemetry
+deactivate Robot
+activate Backend
+Backend -> Controls : Broadcast
+deactivate Backend
+
+deactivate Controls
+
+== Stop Command ==
+User -> Controls : Release Button\n(or press Space)
+activate Controls
+
+Controls -> WSClient : sendCommand("stop")
+activate WSClient
+WSClient -> Backend : {"type":"cmd", "cmd":"stop"}
+deactivate WSClient
+activate Backend
+
+Backend -> Robot : Forward Command
+deactivate Backend
+activate Robot
+
+Robot -> Robot : Receive "stop"
+Robot -> Robot : Reset last_executed_command = "stop"
+Robot -> Robot : Halt movement
+Robot -> Robot : Idle battery drain (-0.0005%)
+
+Robot -> Webots : No position change
+Robot -> Backend : Send Telemetry (stopped)
+deactivate Robot
+
+deactivate Controls
+
+@enduml

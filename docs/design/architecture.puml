@@ -1,0 +1,101 @@
+@startuml system_architecture
+!define RECTANGLE class
+
+title S4 Remote Robot Management System - Architecture Diagram
+
+skinparam componentStyle rectangle
+skinparam backgroundColor #FEFEFE
+skinparam component {
+    BackgroundColor<<webots>> LightBlue
+    BackgroundColor<<backend>> LightGreen
+    BackgroundColor<<frontend>> LightCoral
+    BorderColor Black
+    FontSize 12
+}
+
+package "Webots Simulation Environment" <<webots>> {
+    [Robot Entity\n(Humanoid)] as Robot
+    [Python Supervisor\nController] as Controller
+    [World File\nrobot_world_humanoid.wbt] as World
+    database "Sensors" as Sensors {
+        [GPS]
+        [Compass]
+    }
+    
+    World --> Robot : defines
+    Robot --> Controller : controlled by
+    Robot --> Sensors : reads from
+}
+
+package "Cloud Backend (Node.js)" <<backend>> {
+    [Express Server\nPort 3000] as Express
+    [WebSocket Server\nws://localhost:3000] as WSServer
+    [Message Router\nws-router.js] as Router
+    [Kinematics Utils\nmovement calculations] as Utils
+    database "In-Memory State" as State {
+        [Connected Clients]
+        [Telemetry History]
+    }
+    
+    Express --> WSServer : provides
+    WSServer --> Router : routes through
+    Router --> Utils : uses
+    Router --> State : updates
+}
+
+package "Cloud Frontend (React)" <<frontend>> {
+    [Vite Dev Server\nPort 5173] as Vite
+    [React App\nApp.jsx] as ReactApp
+    [WebSocket Client\nwebsocket.js] as WSClient
+    
+    component "UI Components" {
+        [Connection Status]
+        [Telemetry Panel]
+        [Tele-operation Controls]
+        [Path Visualization]
+        [Live Logs]
+    }
+    
+    Vite --> ReactApp : serves
+    ReactApp --> WSClient : uses
+    ReactApp --> [UI Components] : renders
+}
+
+' Connections between tiers
+Controller -right-> WSServer : Telemetry\n(200-300ms)\nJSON/WebSocket
+WSServer -right-> WSClient : Broadcast\nTelemetry
+WSClient -left-> WSServer : Commands\n(forward/back/left/right/stop)
+WSServer -left-> Controller : Forward\nCommands
+
+' User interaction
+actor "User" as User
+User --> [UI Components] : interacts
+User --> [Tele-operation Controls] : clicks/keyboard
+
+' Notes
+note right of Controller
+    **Supervisor API**
+    - Direct field manipulation
+    - translation.setSFVec3f()
+    - rotation.setSFRotation()
+    - 90° instant turns
+    - Command debouncing
+end note
+
+note right of WSServer
+    **Message Types**
+    - telemetry (robot → frontend)
+    - cmd (frontend → robot)
+    - connected (status)
+    - ack (confirmation)
+end note
+
+note right of ReactApp
+    **State Management**
+    - telemetry (live data)
+    - pathHistory (last 500)
+    - logs (last 100)
+    - connectionStatus
+end note
+
+@enduml

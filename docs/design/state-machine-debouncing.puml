@@ -1,0 +1,135 @@
+@startuml state_machine_command_debouncing
+title Command Debouncing State Machine
+
+skinparam backgroundColor #FEFEFE
+skinparam state {
+    BackgroundColor LightYellow
+    BorderColor Black
+    FontSize 12
+    ArrowColor Black
+}
+
+[*] --> Idle : System Start
+
+state Idle {
+    state "last_executed_command = 'stop'" as idle_state
+}
+
+state "Command Received" as CheckCommand <<choice>>
+
+state "Forward Movement" as ForwardState {
+    state "Continuous Forward" as forward_action
+    forward_action : Move in facing direction
+    forward_action : new_x = x + cos(θ) × 0.02
+    forward_action : new_y = y + sin(θ) × 0.02
+    forward_action : last_executed_command = "forward"
+    forward_action : Battery drain: -0.002%
+}
+
+state "Backward Movement" as BackwardState {
+    state "Continuous Backward" as backward_action
+    backward_action : Move opposite to facing
+    backward_action : new_x = x - cos(θ) × 0.02
+    backward_action : new_y = y - sin(θ) × 0.02
+    backward_action : last_executed_command = "backward"
+    backward_action : Battery drain: -0.002%
+}
+
+state "Left Command Processing" as LeftProcessing <<choice>>
+
+state "Left Turn + Forward" as LeftTurn {
+    state "Execute 90° Turn" as left_turn
+    left_turn : new_θ = normalize_theta(θ + π/2)
+    left_turn : Print: "✨ Turn 90° Left"
+    left_turn : Then move forward in new direction
+    left_turn : new_x = x + cos(new_θ) × 0.02
+    left_turn : new_y = y + sin(new_θ) × 0.02
+    left_turn : last_executed_command = "left"
+    left_turn : Battery drain: -0.003%
+}
+
+state "Left Forward Only" as LeftForward {
+    state "Continue Forward" as left_forward
+    left_forward : Skip rotation (already turned)
+    left_forward : new_x = x + cos(θ) × 0.02
+    left_forward : new_y = y + sin(θ) × 0.02
+    left_forward : last_executed_command remains "left"
+    left_forward : Battery drain: -0.002%
+}
+
+state "Right Command Processing" as RightProcessing <<choice>>
+
+state "Right Turn + Forward" as RightTurn {
+    state "Execute 90° Turn" as right_turn
+    right_turn : new_θ = normalize_theta(θ - π/2)
+    right_turn : Print: "✨ Turn 90° Right"
+    right_turn : Then move forward in new direction
+    right_turn : new_x = x + cos(new_θ) × 0.02
+    right_turn : new_y = y + sin(new_θ) × 0.02
+    right_turn : last_executed_command = "right"
+    right_turn : Battery drain: -0.003%
+}
+
+state "Right Forward Only" as RightForward {
+    state "Continue Forward" as right_forward
+    right_forward : Skip rotation (already turned)
+    right_forward : new_x = x + cos(θ) × 0.02
+    right_forward : new_y = y + sin(θ) × 0.02
+    right_forward : last_executed_command remains "right"
+    right_forward : Battery drain: -0.002%
+}
+
+' Transitions from Idle
+Idle --> CheckCommand : Receive Command
+
+' Command routing
+CheckCommand --> ForwardState : cmd == "forward"
+CheckCommand --> BackwardState : cmd == "backward"
+CheckCommand --> LeftProcessing : cmd == "left"
+CheckCommand --> RightProcessing : cmd == "right"
+CheckCommand --> Idle : cmd == "stop"
+
+' Left command decision
+LeftProcessing --> LeftTurn : last_executed_command != "left"\n(First press or after other command)
+LeftProcessing --> LeftForward : last_executed_command == "left"\n(Holding button)
+
+' Right command decision
+RightProcessing --> RightTurn : last_executed_command != "right"\n(First press or after other command)
+RightProcessing --> RightForward : last_executed_command == "right"\n(Holding button)
+
+' Return to check next command
+ForwardState --> CheckCommand : Controller cycle complete\n(64ms later)
+BackwardState --> CheckCommand : Controller cycle complete
+LeftTurn --> CheckCommand : Controller cycle complete
+LeftForward --> CheckCommand : Controller cycle complete
+RightTurn --> CheckCommand : Controller cycle complete
+RightForward --> CheckCommand : Controller cycle complete
+
+' Notes
+note right of LeftProcessing
+    **Debouncing Logic**
+    Prevents continuous 90° rotation
+    when holding LEFT button
+    
+    Turn only executes when:
+    last_executed_command != "left"
+end note
+
+note right of RightProcessing
+    **Debouncing Logic**
+    Prevents continuous 90° rotation
+    when holding RIGHT button
+    
+    Turn only executes when:
+    last_executed_command != "right"
+end note
+
+note bottom of Idle
+    **Idle State**
+    - No movement
+    - Minimal battery drain (-0.0005%)
+    - Ready for next command
+    - last_executed_command = "stop"
+end note
+
+@enduml
