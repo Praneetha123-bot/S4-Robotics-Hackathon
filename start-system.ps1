@@ -8,28 +8,31 @@ Write-Host "  S4 Remote Robot Management System - Starting..." -ForegroundColor 
 Write-Host "============================================================" -ForegroundColor Cyan
 Write-Host ""
 
+# Refresh PATH to detect Node.js and other installed software
+$env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+
 $projectRoot = $PSScriptRoot
 
 # Kill any existing node/webots processes
-Write-Host "→ Stopping existing processes..." -ForegroundColor Yellow
+Write-Host "--> Stopping existing processes..." -ForegroundColor Yellow
 Stop-Process -Name "node" -Force -ErrorAction SilentlyContinue
 Stop-Process -Name "webots-bin" -Force -ErrorAction SilentlyContinue
 Start-Sleep -Seconds 2
 
 # Start Backend
-Write-Host "→ Starting Backend Server..." -ForegroundColor Green
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$projectRoot\backend'; Write-Host '🚀 Backend Server' -ForegroundColor Cyan; npm start" -WindowStyle Normal
+Write-Host "--> Starting Backend Server..." -ForegroundColor Green
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$projectRoot\backend'; Write-Host 'Backend Server' -ForegroundColor Cyan; npm start" -WindowStyle Normal
 
 Start-Sleep -Seconds 3
 
 # Start Frontend
-Write-Host "→ Starting Frontend Dashboard..." -ForegroundColor Green
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$projectRoot\frontend'; Write-Host '🌐 Frontend Dashboard' -ForegroundColor Cyan; npm run dev" -WindowStyle Normal
+Write-Host "--> Starting Frontend Dashboard..." -ForegroundColor Green
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$projectRoot\frontend'; Write-Host 'Frontend Dashboard' -ForegroundColor Cyan; npm run dev" -WindowStyle Normal
 
 Start-Sleep -Seconds 3
 
 # Start Webots
-Write-Host "→ Launching Webots Simulation..." -ForegroundColor Green
+Write-Host "--> Launching Webots Simulation..." -ForegroundColor Green
 $webotsPaths = @(
     "C:\Program Files\Webots\msys64\mingw64\bin\webots.exe",
     "C:\Webot\Webots\msys64\mingw64\bin\webots.exe",
@@ -48,18 +51,18 @@ if ($webotsExe) {
     $worldFile = "$projectRoot\webots_project\worlds\robot_world_humanoid.wbt"
     if (Test-Path $worldFile) {
         Start-Process $webotsExe -ArgumentList "`"$worldFile`""
-        Write-Host "✓ Webots launched!" -ForegroundColor Green
+        Write-Host "[OK] Webots launched!" -ForegroundColor Green
     } else {
-        Write-Host "✗ World file not found: $worldFile" -ForegroundColor Red
+        Write-Host "[X] World file not found: $worldFile" -ForegroundColor Red
     }
 } else {
-    Write-Host "✗ Webots not found! Please install from https://cyberbotics.com" -ForegroundColor Red
+    Write-Host "[X] Webots not found! Please install from https://cyberbotics.com" -ForegroundColor Red
 }
 
 Start-Sleep -Seconds 5
 
 # Open Browser
-Write-Host "→ Opening Dashboard in Browser..." -ForegroundColor Green
+Write-Host "--> Opening Dashboard in Browser..." -ForegroundColor Green
 Start-Process "http://localhost:5173"
 
 Write-Host ""
